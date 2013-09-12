@@ -26,19 +26,29 @@ sub packet_forwarder {
     my $data = [ undef   , $out , $queue_size , []     , $cb , undef         ];
     $data->[0] = packet_reader $in, $templ, $max_load_length, sub { _packet($_[0], $data) };
 
-    my $obj = \\$data;
+    my $obj = \$data;
     bless $obj;
 }
 
+sub _push {
+    my $data = $_[1];
+    use Data::Dumper;
+    print STDERR Data::Dumper->Dump([\@_, $data], [qw(@_ $data)]);
+    if (length $_[0]) {
+        my $queue = $data->[3];
+        push @$queue, $_[0];
+        $data->[0]->pause if @$queue == $data->[2];
+        $data->[5] ||= AE::io $data->[1], 1, sub { _write($data) };
+    }
+}
+
 sub _packet {
-    my $data = shift;
+    my $data = $_[1];
     if (defined $_[0]) {
-        if ($data->[4]->($_[0])) {
-            my $queue = $data->[3];
-            push @$queue, $_[0];
-            $data->[0]->pause if @$queue >= $data->[2];
-            $data->[5] ||= AE::io $data->[1], 1, sub { _write($data) };
-        }
+        # use Data::Dumper;
+        # print STDERR Data::Dumper->Dump([$data], [qw($data)]);
+        $data->[4]->($_[0]);
+        _push(@_);
         return;
     }
     $data->[4]->();
@@ -81,17 +91,27 @@ sub _fatal_write {
     $data->[4]->(undef, 1);
 }
 
+sub push {
+    my $data = ${shift()};
+    _push($_[0], $data);
+}
+
 1;
 __END__
 
 
 =head1 NAME
 
-AnyEvent::PacketForwarder - Perl extension for blah blah blah
+AnyEvent::PacketForwarder - Forward packets between two sockets
 
 =head1 SYNOPSIS
 
   use AnyEvent::PacketForwarder;
+
+  $watcher = packet_forwarder $in_fh, $out_fh, sub {
+     
+
+  }
   blah blah blah
 
 =head1 DESCRIPTION
