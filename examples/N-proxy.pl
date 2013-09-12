@@ -104,3 +104,7 @@ sub _hexdump {
 
 }
 
+sub DESTROY {
+    my $self = shift;
+    warn "proxy for file descriptor $self->{client_fd} destroyed\n";
+}
