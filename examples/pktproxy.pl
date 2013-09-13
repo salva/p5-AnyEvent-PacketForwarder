@@ -8,13 +8,13 @@ use AnyEvent::Socket;
 
 $AnyEvent::PacketReader::debug = -1;
 
-@ARGV == 2 or die <<EOU;
+die <<EOU if @ARGV < 2 or @ARGV > 3;
 Usage:
-    $0 local_port dst_host[:dst_port]
+    $0 local_port dst_host[:dst_port] [header_templ]
 
 EOU
 
-my ($local_port, $dst) = @ARGV;
+my ($local_port, $dst, $header_templ) = @ARGV;
 my ($dst_host, $dst_port) = $dst =~ /^(.*?)(?::(\d+))?$/;
 defined $dst_host or die "invalid destination host expecification\n";
 $dst_port = $local_port unless defined $dst_port;
@@ -53,9 +53,9 @@ sub _on_connected_to_server {
         use Data::Dumper;
         print STDERR Data::Dumper->Dump([$self], [qw($self)]);
 
-        $self->{c2s_forwarder} = packet_forwarder $client_socket, $server_socket,
+        $self->{c2s_forwarder} = packet_forwarder $client_socket, $server_socket, $header_templ,
             weak_method_callback($self, '_on_data', 'c2s');
-        $self->{s2c_forwarder} = packet_forwarder $server_socket, $client_socket,
+        $self->{s2c_forwarder} = packet_forwarder $server_socket, $client_socket, $header_templ,
             weak_method_callback($self, '_on_data', 's2c');
     }
     else {
