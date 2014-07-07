@@ -70,12 +70,15 @@ sub _write {
         if ($bytes) {
             substr($queue->[0], 0, $bytes, '');
         }
-        elsif (defined $bytes) {
-            _fatal_write($data, EPIPE);
-        }
         else {
-            $! == $_ and return for (EINTR, EAGAIN, EWOULDBLOCK);
-            _fatal_write($data);
+            # AE::log debug => "$data->syswrite -> " . ($bytes//'<undef>') . " \$!: $!, \$\@: $@";
+            if (defined $bytes) {
+                _fatal_write($data, EPIPE);
+            }
+            else {
+                $! == $_ and return for (EINTR, EAGAIN, EWOULDBLOCK);
+                _fatal_write($data);
+            }
         }
         return;
     }
@@ -89,6 +92,7 @@ sub _fatal_write {
     my $data = shift;
     local $! = shift if @_;
     $data->[4]->(undef, 1);
+    @{$data->[3]} = ();
 }
 
 sub push {
@@ -215,7 +219,7 @@ Salvador FandiE<ntilde>o, E<lt>sfandino@yahoo.comE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2013 by Qindel FormaciE<oacute>n y Servicios S.L.
+Copyright (C) 2013, 2014 by Qindel FormaciE<oacute>n y Servicios S.L.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.14.2 or,
